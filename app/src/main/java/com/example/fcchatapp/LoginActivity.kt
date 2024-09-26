@@ -8,10 +8,12 @@ import androidx.activity.enableEdgeToEdge
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
+import com.example.fcchatapp.Key.Companion.DB_USERS
 import com.example.fcchatapp.databinding.ActivityLoginBinding
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.auth.auth
 import com.google.firebase.auth.ktx.auth
+import com.google.firebase.database.ktx.database
 import com.google.firebase.ktx.Firebase
 
 class LoginActivity : AppCompatActivity() {
@@ -60,8 +62,18 @@ class LoginActivity : AppCompatActivity() {
 
             auth.signInWithEmailAndPassword(email, password)
                 .addOnCompleteListener(this) { task ->
-                    if(task.isSuccessful) {
+                    val currentUser = Firebase.auth.currentUser
+                    if(task.isSuccessful && currentUser != null) {
                         // 로그인 성공
+                        val userId = currentUser.uid
+
+                        val user = mutableMapOf<String, Any>()
+                        user["userId"] = userId
+                        user["username"] = email
+
+
+                        Firebase.database.reference.child(DB_USERS).child(userId).updateChildren(user)
+
                         val intent = Intent(this, MainActivity::class.java)
                         startActivity(intent)
                         finish()
