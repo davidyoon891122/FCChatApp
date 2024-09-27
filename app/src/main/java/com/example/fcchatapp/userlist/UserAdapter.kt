@@ -8,13 +8,17 @@ import androidx.recyclerview.widget.RecyclerView
 import androidx.recyclerview.widget.RecyclerView.ViewHolder
 import com.example.fcchatapp.databinding.ItemUserBinding
 
-class UserAdapter: ListAdapter<UserItem, UserAdapter.ViewHolder>(differ) {
+class UserAdapter(private val onClick: (UserItem) -> Unit): ListAdapter<UserItem, UserAdapter.ViewHolder>(differ) {
 
     inner class ViewHolder(private val binding: ItemUserBinding): RecyclerView.ViewHolder(binding.root) {
 
         fun bind(item: UserItem) {
             binding.nicknameTextView.text = item.username
             binding.descriptionTextView.text = item.description
+
+            binding.root.setOnClickListener {
+                onClick(item)
+            }
         }
 
     }

@@ -1,6 +1,7 @@
 package com.example.fcchatapp.chatdetail
 
 import android.os.Bundle
+import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import androidx.recyclerview.widget.LinearLayoutManager
 import com.example.fcchatapp.Key
@@ -20,6 +21,7 @@ class ChatActivity: AppCompatActivity() {
     private var chatRoomId: String = ""
     private var otherUserId: String = ""
     private var myUserId: String = ""
+    private var myUserName: String = ""
 
     private val chatItemList = mutableListOf<ChatItem>()
 
@@ -30,15 +32,15 @@ class ChatActivity: AppCompatActivity() {
 
         setContentView(binding.root)
 
-        chatRoomId = intent.getStringExtra("chatRoomId") ?: return
-        otherUserId = intent.getStringExtra("otherUserId") ?: return
+        chatRoomId = intent.getStringExtra(EXTRA_CHAT_ROOM_ID) ?: return
+        otherUserId = intent.getStringExtra(EXTRA_OTHER_USER_ID) ?: return
         myUserId = Firebase.auth.currentUser?.uid ?: ""
 
         val chatDetailAdapter = ChatDetailAdapter()
         Firebase.database.reference.child(Key.DB_USERS).child(myUserId).get()
             .addOnSuccessListener {
                 val myUserItem = it.getValue(UserItem::class.java)
-                val myUserName = myUserItem?.username
+                myUserName = myUserItem?.username ?: ""
             }
 
         Firebase.database.reference.child(Key.DB_USERS).child(otherUserId).get()
@@ -75,6 +77,43 @@ class ChatActivity: AppCompatActivity() {
             layoutManager = LinearLayoutManager(context)
             adapter = chatDetailAdapter
         }
+
+        binding.sendButton.setOnClickListener {
+            val message = binding.messageEditText.text.toString()
+
+            if(message.isEmpty()) {
+                Toast.makeText(applicationContext, "빈 메시지를 전송할 수는 없습니다.", Toast.LENGTH_SHORT).show()
+                return@setOnClickListener
+            }
+
+            val newChatItem = ChatItem(
+                message = message,
+                userId = myUserId,
+            )
+
+            Firebase.database.reference.child(Key.DB_CHATS).child(chatRoomId).push().apply {
+                newChatItem.chatId = key
+                setValue(newChatItem)
+            }
+
+            val updates: MutableMap<String, Any> = hashMapOf(
+                "${Key.DB_CHAT_ROOMS}/$myUserId/$otherUserId/lastMessage" to message,
+                "${Key.DB_CHAT_ROOMS}/$otherUserId/$myUserId/lastMessage" to message,
+                "${Key.DB_CHAT_ROOMS}/$otherUserId/$myUserId/chatRoomId" to chatRoomId,
+                "${Key.DB_CHAT_ROOMS}/$otherUserId/$myUserId/otherUserId" to myUserId,
+                "${Key.DB_CHAT_ROOMS}/$otherUserId/$myUserId/otherUserName" to myUserName,
+            )
+
+            Firebase.database.reference.updateChildren(updates)
+
+            binding.messageEditText.text.clear()
+
+        }
+    }
+
+    companion object {
+        const val EXTRA_CHAT_ROOM_ID = "CHAT_ROOM_ID"
+        const val EXTRA_OTHER_USER_ID = "OTHER_USER_ID"
     }
 
 }
