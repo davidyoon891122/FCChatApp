@@ -55,7 +55,7 @@ class ChatActivity: AppCompatActivity() {
                 chatItem ?: return
                 chatItemList.add(chatItem)
 
-                chatDetailAdapter.submitList(chatItemList)
+                chatDetailAdapter.submitList(chatItemList.toMutableList())
 
             }
 
