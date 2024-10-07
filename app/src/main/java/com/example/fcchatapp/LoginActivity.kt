@@ -15,6 +15,7 @@ import com.google.firebase.auth.auth
 import com.google.firebase.auth.ktx.auth
 import com.google.firebase.database.ktx.database
 import com.google.firebase.ktx.Firebase
+import com.google.firebase.messaging.ktx.messaging
 
 class LoginActivity : AppCompatActivity() {
 
@@ -67,16 +68,19 @@ class LoginActivity : AppCompatActivity() {
                         // 로그인 성공
                         val userId = currentUser.uid
 
-                        val user = mutableMapOf<String, Any>()
-                        user["userId"] = userId
-                        user["username"] = email
+                        Firebase.messaging.token.addOnCompleteListener {
+                            val token = it.result
+                            val user = mutableMapOf<String, Any>()
+                            user["userId"] = userId
+                            user["username"] = email
+                            user["fcmToken"] = token
 
+                            Firebase.database.reference.child(DB_USERS).child(userId).updateChildren(user)
 
-                        Firebase.database.reference.child(DB_USERS).child(userId).updateChildren(user)
-
-                        val intent = Intent(this, MainActivity::class.java)
-                        startActivity(intent)
-                        finish()
+                            val intent = Intent(this, MainActivity::class.java)
+                            startActivity(intent)
+                            finish()
+                        }
                     } else {
                         // 로그인 실패
                         Log.d("LoginActivity", task.exception.toString())
