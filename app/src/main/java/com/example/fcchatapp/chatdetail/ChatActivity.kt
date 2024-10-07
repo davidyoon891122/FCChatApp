@@ -4,6 +4,7 @@ import android.os.Bundle
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import androidx.recyclerview.widget.LinearLayoutManager
+import androidx.recyclerview.widget.RecyclerView
 import com.example.fcchatapp.Key
 import com.example.fcchatapp.R
 import com.example.fcchatapp.databinding.ActivityChatdetailBinding
@@ -24,10 +25,11 @@ import okhttp3.Response
 import org.json.JSONObject
 import java.io.IOException
 
-class ChatActivity: AppCompatActivity() {
+class ChatActivity : AppCompatActivity() {
 
     private lateinit var binding: ActivityChatdetailBinding
-    private lateinit var chatDetailAdapter:ChatDetailAdapter
+    private lateinit var chatDetailAdapter: ChatDetailAdapter
+    private lateinit var linearLayoutManager: LinearLayoutManager
 
     private var chatRoomId: String = ""
     private var otherUserId: String = ""
@@ -49,6 +51,7 @@ class ChatActivity: AppCompatActivity() {
         otherUserId = intent.getStringExtra(EXTRA_OTHER_USER_ID) ?: return
         myUserId = Firebase.auth.currentUser?.uid ?: ""
         chatDetailAdapter = ChatDetailAdapter()
+        linearLayoutManager = LinearLayoutManager(applicationContext)
 
         Firebase.database.reference.child(Key.DB_USERS).child(myUserId).get()
             .addOnSuccessListener {
@@ -61,9 +64,22 @@ class ChatActivity: AppCompatActivity() {
 
 
         binding.chatRecyclerView.apply {
-            layoutManager = LinearLayoutManager(context)
+            layoutManager = linearLayoutManager
             adapter = chatDetailAdapter
         }
+
+        chatDetailAdapter.registerAdapterDataObserver(object : RecyclerView.AdapterDataObserver() {
+            override fun onItemRangeInserted(positionStart: Int, itemCount: Int) {
+                super.onItemRangeInserted(positionStart, itemCount)
+
+                linearLayoutManager.smoothScrollToPosition(
+                    binding.chatRecyclerView,
+                    null,
+                    chatDetailAdapter.itemCount
+                )
+
+            }
+        })
 
         binding.sendButton.setOnClickListener {
             val message = binding.messageEditText.text.toString()
@@ -72,7 +88,7 @@ class ChatActivity: AppCompatActivity() {
                 return@setOnClickListener
             }
 
-            if(message.isEmpty()) {
+            if (message.isEmpty()) {
                 Toast.makeText(applicationContext, "빈 메시지를 전송할 수는 없습니다.", Toast.LENGTH_SHORT).show()
                 return@setOnClickListener
             }
@@ -110,7 +126,7 @@ class ChatActivity: AppCompatActivity() {
 
             //val requestBody = root.toString().toRequestBody("application/json; charset=utf8".toMediaType())
             //val request = Request.Builder().post(requestBody).url("")
-              //  .header("Authorization", "key=${Key.FCM_SERVER_KEY}").build()
+            //  .header("Authorization", "key=${Key.FCM_SERVER_KEY}").build()
 
 //            client.newCall(request).enqueue(object : Callback {
 //                override fun onFailure(call: Call, e: IOException) {
@@ -142,29 +158,30 @@ class ChatActivity: AppCompatActivity() {
     }
 
     private fun getChatData() {
-        Firebase.database.reference.child(Key.DB_CHATS).child(chatRoomId).addChildEventListener(object : ChildEventListener{
-            override fun onChildAdded(snapshot: DataSnapshot, previousChildName: String?) {
-                val chatItem = snapshot.getValue(ChatItem::class.java)
-                chatItem ?: return
-                chatItemList.add(chatItem)
+        Firebase.database.reference.child(Key.DB_CHATS).child(chatRoomId)
+            .addChildEventListener(object : ChildEventListener {
+                override fun onChildAdded(snapshot: DataSnapshot, previousChildName: String?) {
+                    val chatItem = snapshot.getValue(ChatItem::class.java)
+                    chatItem ?: return
+                    chatItemList.add(chatItem)
 
-                chatDetailAdapter.submitList(chatItemList.toMutableList())
+                    chatDetailAdapter.submitList(chatItemList.toMutableList())
 
-            }
+                }
 
-            override fun onChildChanged(snapshot: DataSnapshot, previousChildName: String?) {
-            }
+                override fun onChildChanged(snapshot: DataSnapshot, previousChildName: String?) {
+                }
 
-            override fun onChildRemoved(snapshot: DataSnapshot) {
-            }
+                override fun onChildRemoved(snapshot: DataSnapshot) {
+                }
 
-            override fun onChildMoved(snapshot: DataSnapshot, previousChildName: String?) {
-            }
+                override fun onChildMoved(snapshot: DataSnapshot, previousChildName: String?) {
+                }
 
-            override fun onCancelled(error: DatabaseError) {
-            }
+                override fun onCancelled(error: DatabaseError) {
+                }
 
-        })
+            })
     }
 
     companion object {
